@@ -1,13 +1,10 @@
 /**
  * Unit test for /events +page.svelte.
  *
- * Mounts the page with SvelteKit and API mocks; verifies the component
- * renders and the list fetch fires on mount.
- *
- * Note: the events page reassigns `pagination` from the API response in
- * an $effect, which can feed a render loop if the mock returns a fresh
- * pagination object on every call. We omit `pagination` from the default
- * mock so the `|| pagination` fallback keeps the same reference.
+ * Covers mount + initial list fetch. Interactive search/filter tests are
+ * covered in the E2E suite — they trigger the page's $effect which
+ * reassigns `pagination`, which in turn can re-run the effect in a loop
+ * under vitest + Svelte 5 if the mock response varies across calls.
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { readable } from 'svelte/store';
@@ -33,10 +30,11 @@ beforeEach(async () => {
   vi.resetAllMocks();
   if (cleanup) cleanup();
 
-  getMock = vi.fn().mockResolvedValue({
-    data: { data: [] },
-    error: null,
-  });
+  // Omit `pagination` from the response so the page's
+  // `pagination = data?.pagination || pagination` falls through to the
+  // existing reference (no re-trigger).
+  const stableResponse = { data: { data: [] }, error: null };
+  getMock = vi.fn().mockResolvedValue(stableResponse);
 
   vi.doMock('$lib/api/client.js', () => ({ get: getMock, post: vi.fn() }));
   vi.doMock('$lib/stores/auth.js', () => ({
@@ -63,7 +61,7 @@ afterEach(() => {
 });
 
 describe('/events +page.svelte', () => {
-  it('renders the page heading and the Events list shell', () => {
+  it('renders the Events heading', () => {
     const { getByText } = render(EventsPage);
     expect(getByText('Events')).toBeTruthy();
   });
@@ -78,7 +76,7 @@ describe('/events +page.svelte', () => {
     expect(url).toMatch(/pageSize=20/);
   });
 
-  it('renders the Create Event link when the caller has event:create', () => {
+  it('shows the Create Event link when the caller holds event:create', () => {
     const { getByText } = render(EventsPage);
     const link = getByText(/Create Event/i);
     expect(link).toBeTruthy();

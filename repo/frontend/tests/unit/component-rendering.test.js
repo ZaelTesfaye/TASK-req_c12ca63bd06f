@@ -113,10 +113,12 @@ describe('<LoadingSpinner>', () => {
 describe('<Pagination>', () => {
   it('renders navigation controls and reacts to page changes', async () => {
     const onPageChange = vi.fn();
+    // The component computes totalPages from (total / pageSize). Passing
+    // `totalPages` directly is ignored — we need `total` + `pageSize` that
+    // derive a value > 1, otherwise the nav block renders nothing.
     const { container } = render(Pagination, {
-      props: { page: 2, totalPages: 5, onPageChange },
+      props: { page: 2, pageSize: 10, total: 50, onPageChange },
     });
-    // At minimum the component must render some button(s) for navigation.
     const buttons = container.querySelectorAll('button');
     expect(buttons.length).toBeGreaterThan(0);
   });

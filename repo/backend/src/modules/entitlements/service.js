@@ -408,11 +408,12 @@ export async function redeem(userId, entitlementId, quantity, idempotencyKey, us
   // 2. Validate entitlement
   //
   // redemption_records.entitlement_id and .event_id are both NOT NULL FK
-  // columns (see 001_initial_schema.js:478–482). We previously attempted to
-  // write a failure row with a zero-UUID placeholder for both columns,
-  // which triggered an FK violation and a 500 on what should be a clean
-  // 404. Instead, log the failed attempt and surface a structured not-found
-  // error so the route can respond with 404 consistently.
+  // columns (see 001_initial_schema.js:478–482), so writing a failure row
+  // with a zero-UUID placeholder triggers an FK violation. Return a plain
+  // failure result instead of persisting anything. The route's pre-check
+  // in entitlements/routes.js already maps this to HTTP 404, and unit
+  // tests that invoke the service directly receive the structured failure
+  // shape they assert on.
   const entitlement = await entitlementsRepo.findById(entitlementId);
 
   if (!entitlement) {
@@ -420,7 +421,13 @@ export async function redeem(userId, entitlementId, quantity, idempotencyKey, us
       { action: 'redeem', entitlementId, userId, idempotencyKey },
       'Redemption attempted on nonexistent entitlement',
     );
-    throw new NotFoundError('Entitlement', entitlementId);
+    return {
+      success: false,
+      redemptionId: null,
+      remaining: 0,
+      idempotencyKey,
+      failureReason: 'Entitlement not found',
+    };
   }
 
   // Check expiry

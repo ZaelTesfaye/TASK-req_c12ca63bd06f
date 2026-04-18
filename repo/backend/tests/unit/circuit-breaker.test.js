@@ -2,12 +2,14 @@
  * Unit tests for the circuit breaker plugin.
  */
 
-import { EventEmitter } from 'node:events';
+// vi.mock is hoisted above imports, so a top-level
+// `import { EventEmitter }` is in the temporal dead zone when the factory
+// runs. Use vi.hoisted for the shared instance store and let the factory
+// pull EventEmitter in via `await import()` at call time.
+const { createdBreakers } = vi.hoisted(() => ({ createdBreakers: [] }));
 
-// Track all created instances so tests can inspect them
-const createdBreakers = [];
-
-vi.mock('opossum', () => {
+vi.mock('opossum', async () => {
+  const { EventEmitter } = await import('node:events');
   class MockCircuitBreaker extends EventEmitter {
     constructor(fn, opts) {
       super();

@@ -8,8 +8,15 @@
  * a real PostgreSQL instance.
  */
 
-import { runMigrations } from '../../src/db/connection.js';
-import db from '../../src/db/connection.js';
+// `db` is needed internally by setupTestDb / teardownTestDb, AND is
+// re-exported so tests can do `import { db } from './setup.js'`. The
+// previous pattern (`import { db } from '...'; export { db };`) was
+// producing `TypeError: (0 , db) is not a function` in tests because
+// Vitest's transformer generated a non-callable binding for the local
+// re-export. A direct `export { db } from '...'` at the bottom is
+// transform-stable and gives tests a live binding to the real knex
+// function.
+import { db, runMigrations } from '../../src/db/connection.js';
 import { buildApp } from '../../src/app.js';
 
 // ---------------------------------------------------------------------------
@@ -140,4 +147,9 @@ export async function loginFull(app, username, password) {
   return JSON.parse(res.payload);
 }
 
-export { db };
+// NOTE: test files no longer import `db` through this module. Each
+// integration suite imports `db` directly from '../../src/db/connection.js'
+// because passing it through a setup-level re-export produced
+// `TypeError: (0 , db) is not a function` under Vitest's module
+// transformer. `db` is still imported above for internal use by
+// setupTestDb / teardownTestDb.

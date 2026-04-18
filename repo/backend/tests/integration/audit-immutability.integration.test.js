@@ -10,7 +10,8 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
-import { setupTestDb, teardownTestDb, getApp, loginAs, db } from './setup.js';
+import { setupTestDb, teardownTestDb, getApp, loginAs } from './setup.js';
+import db from '../../src/db/connection.js';
 
 let app;
 let adminToken;
@@ -24,7 +25,6 @@ beforeAll(async () => {
 afterAll(async () => {
   if (app) await app.close();
   await teardownTestDb();
-  await db.destroy();
 }, 30000);
 
 describe('Audit trail immutability (real DB)', () => {

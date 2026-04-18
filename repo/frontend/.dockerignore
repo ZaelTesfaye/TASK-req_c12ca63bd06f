@@ -1,0 +1,36 @@
+# Never ship the host's node_modules into the build context.
+# - It can contain platform-specific binaries with permission bits
+#   (e.g. esbuild on Windows) that `archive/tar` can't encode, so
+#   `docker build` fails with "unknown file mode" during checksum.
+# - The Dockerfile runs `npm ci` inside the image to install a fresh,
+#   Linux-native tree — the host copy would be overwritten anyway.
+node_modules
+
+# Build outputs — generated inside the image, don't leak the host's.
+.svelte-kit
+build
+dist
+.cache
+
+# Tests artifacts from Playwright runs.
+test-results
+playwright-report
+
+# Local env + IDE + OS noise that has no business in an image.
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docker + git metadata.
+.git
+.gitignore
+.dockerignore
+Dockerfile*
+
+# Logs.
+*.log
+npm-debug.log*

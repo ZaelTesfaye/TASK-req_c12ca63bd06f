@@ -8,7 +8,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { randomUUID } from 'node:crypto';
-import { setupTestDb, teardownTestDb, getApp, loginAs, db } from './setup.js';
+import { setupTestDb, teardownTestDb, getApp, loginAs } from './setup.js';
+import db from '../../src/db/connection.js';
 
 let app;
 let adminToken, managerToken, approverToken, plannerToken;
@@ -102,7 +103,6 @@ beforeAll(async () => {
 afterAll(async () => {
   if (app) await app.close();
   await teardownTestDb();
-  await db.destroy();
 }, 30000);
 
 describe('Reservations lifecycle (real DB)', () => {

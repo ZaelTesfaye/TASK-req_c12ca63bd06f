@@ -31,8 +31,10 @@ var/
 sdist/
 develop-eggs/
 .installed.cfg
-lib/
-lib64/
+# NOTE: unqualified `lib/` and `lib64/` used to live here. They match
+# Python venv layouts but also swallow the JS project's
+# repo/frontend/src/lib/ — breaking the frontend build on clean checkouts.
+# The venv/.venv/env/.env/ rules above already cover every Python case.
 
 # Flask
 instance/

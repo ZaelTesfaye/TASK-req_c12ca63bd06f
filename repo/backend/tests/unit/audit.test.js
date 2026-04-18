@@ -62,8 +62,11 @@ describe('writeAudit', () => {
     expect(insertArg.subject_id).toBe('123');
     expect(insertArg.action).toBe('create');
     expect(insertArg.actor_user_id).toBe('actor-001');
-    expect(insertArg.before).toBe(JSON.stringify({ status: 'active' }));
-    expect(insertArg.after).toBe(JSON.stringify({ status: 'inactive' }));
+    // The DB columns are before_json / after_json (see
+    // 001_initial_schema.js — jsonb columns). Test the production
+    // contract, not a hypothetical one.
+    expect(insertArg.before_json).toBe(JSON.stringify({ status: 'active' }));
+    expect(insertArg.after_json).toBe(JSON.stringify({ status: 'inactive' }));
     expect(insertArg.notes).toBe('Status changed');
     expect(insertArg.created_at).toBeInstanceOf(Date);
   });
@@ -72,8 +75,8 @@ describe('writeAudit', () => {
     await writeAudit(baseParams);
 
     const insertArg = mockInsert.mock.calls[0][0];
-    expect(insertArg.before).toBeNull();
-    expect(insertArg.after).toBeNull();
+    expect(insertArg.before_json).toBeNull();
+    expect(insertArg.after_json).toBeNull();
     expect(insertArg.notes).toBeNull();
   });
 
@@ -129,7 +132,7 @@ describe('writeAudit', () => {
     await writeAudit({ ...baseParams, before, after });
 
     const insertArg = mockInsert.mock.calls[0][0];
-    expect(JSON.parse(insertArg.before)).toEqual(before);
-    expect(JSON.parse(insertArg.after)).toEqual(after);
+    expect(JSON.parse(insertArg.before_json)).toEqual(before);
+    expect(JSON.parse(insertArg.after_json)).toEqual(after);
   });
 });

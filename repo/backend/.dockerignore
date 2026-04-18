@@ -1,0 +1,38 @@
+# Never ship the host's node_modules into the build context.
+# Native-bin permission bits on Windows hosts cause `archive/tar:
+# unknown file mode ?rwxr-xr-x` during `docker build` checksum. The
+# Dockerfile runs `npm ci` inside the image anyway.
+node_modules
+
+# Build artifacts / generated output.
+dist
+build
+coverage
+.nyc_output
+.cache
+
+# Test artifacts produced by Vitest/Playwright runs.
+test-results
+
+# Local env + IDE + OS noise.
+.env
+.env.*
+!.env.example
+.vscode
+.idea
+.DS_Store
+Thumbs.db
+
+# Docker + git metadata.
+.git
+.gitignore
+.dockerignore
+Dockerfile*
+
+# Logs.
+*.log
+npm-debug.log*
+
+# Uploaded/generated files that shouldn't be baked into the image.
+uploads
+backups

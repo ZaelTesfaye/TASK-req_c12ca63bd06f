@@ -30,34 +30,40 @@ vi.mock('../../src/logging/index.js', () => ({
   }),
 }));
 
-// Mock inventoryService
-const mockCheckReportingBlocked = vi.fn();
+// vi.mock is hoisted above every top-level statement, so anything it
+// closes over must be declared via vi.hoisted — otherwise the factory
+// runs before the const/let declarations are initialised and trips a
+// temporal-dead-zone ReferenceError.
+const { mockCheckReportingBlocked, mockDb, tableBuilders, createQueryBuilder } = vi.hoisted(() => {
+  const tableBuilders = {};
+  const createQueryBuilder = (resolvedValue) => {
+    const builder = {
+      select: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      whereBetween: vi.fn().mockReturnThis(),
+      join: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      insert: vi.fn().mockReturnThis(),
+      returning: vi.fn().mockResolvedValue(resolvedValue ?? []),
+      orderBy: vi.fn().mockReturnThis(),
+    };
+    return builder;
+  };
+  const mockDb = vi.fn((tableName) => {
+    if (tableBuilders[tableName]) return tableBuilders[tableName];
+    return createQueryBuilder();
+  });
+  return {
+    mockCheckReportingBlocked: vi.fn(),
+    mockDb,
+    tableBuilders,
+    createQueryBuilder,
+  };
+});
 
 vi.mock('../../src/modules/inventory/service.js', () => ({
   checkReportingBlocked: mockCheckReportingBlocked,
 }));
-
-// DB mock
-function createQueryBuilder(resolvedValue) {
-  const builder = {
-    select: vi.fn().mockReturnThis(),
-    where: vi.fn().mockReturnThis(),
-    whereBetween: vi.fn().mockReturnThis(),
-    join: vi.fn().mockReturnThis(),
-    leftJoin: vi.fn().mockReturnThis(),
-    insert: vi.fn().mockReturnThis(),
-    returning: vi.fn().mockResolvedValue(resolvedValue ?? []),
-    orderBy: vi.fn().mockReturnThis(),
-  };
-  return builder;
-}
-
-const tableBuilders = {};
-
-const mockDb = vi.fn((tableName) => {
-  if (tableBuilders[tableName]) return tableBuilders[tableName];
-  return createQueryBuilder();
-});
 
 vi.mock('../../src/db/connection.js', () => ({
   default: mockDb,

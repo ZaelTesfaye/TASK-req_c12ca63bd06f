@@ -269,6 +269,7 @@ describe('Auth-gated navigation filtering', () => {
   it('admin sees all nav items', () => {
     const adminPermissions = [
       'event:create', 'event:read', 'event:update', 'event:approve',
+      'event:service',
       'reservation:request',
       'recipe:create',
       'inventory:read',
@@ -321,7 +322,10 @@ describe('Auth-gated navigation filtering', () => {
     expect(labels).toContain('Catalog');
     expect(labels).toContain('Reports');
     expect(labels).toContain('Entitlements');
-    expect(labels).toContain('Check-In');
+    // Check-In now requires event:service (aligned with the backend
+    // authorize() gate on POST /events/:id/check-in); a planner with
+    // only entitlement:redeem no longer sees it.
+    expect(labels).not.toContain('Check-In');
     expect(labels).not.toContain('Admin');
     expect(labels).not.toContain('Approvals');
     expect(labels).not.toContain('Inventory');
