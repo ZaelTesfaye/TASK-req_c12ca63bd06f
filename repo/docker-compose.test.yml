@@ -1,0 +1,67 @@
+version: "3.9"
+
+services:
+  backend-test:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.test
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: test
+      PORT: "3000"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hospitality_ops
+      JWT_ACCESS_SECRET: dev-access-secret-change-in-production-min-32-chars
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production-min-32-chars
+      JWT_ACCESS_TTL_MINUTES: "45"
+      JWT_REFRESH_TTL_DAYS: "10"
+      ENCRYPTION_KEY_HEX: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      UPLOAD_ROOT: /app/uploads
+      UPLOAD_MAX_MB: "25"
+      UPLOAD_ALLOWED_MIME: "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg,image/gif,image/webp"
+      REDIS_URL: redis://redis:6379
+      CACHE_MODE: redis
+      ENABLE_SSR: "false"
+      ENABLE_TLS: "false"
+      BACKUP_ROOT: /app/backups
+      BACKUP_RETENTION_DAYS: "30"
+      SNAPSHOT_CRON: "0 23 * * *"
+      KEY_CLEANUP_CRON: "0 2 * * *"
+      CB_TIMEOUT_MS: "5000"
+      CB_ERROR_THRESHOLD_PERCENT: "10"
+      CB_ROLLING_WINDOW_MS: "60000"
+      CB_RESET_TIMEOUT_MS: "30000"
+      DRY_RUN_EXTERNAL_STUBS: "true"
+      FRONTEND_URL: http://localhost:5173
+      BACKEND_URL: http://backend:3000
+
+  frontend-test:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.test
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+  # Override the dev frontend so that the browser (running inside the
+  # Playwright container on the same docker-compose network) can reach
+  # the backend by its service hostname rather than via 'localhost'
+  # (which refers to the browser's own container, not the docker host).
+  frontend:
+    environment:
+      VITE_API_URL: http://backend:3000
+
+  e2e-test:
+    image: mcr.microsoft.com/playwright:v1.40.0-jammy
+    working_dir: /app
+    volumes:
+      - ./frontend:/app
+    depends_on:
+      - backend
+      - frontend
+    environment:
+      PLAYWRIGHT_BASE_URL: http://frontend:5173
+      CI: "true"
+    command: sh -c "cd /app && npm ci && npx playwright install --with-deps chromium && npx playwright test --reporter=list"

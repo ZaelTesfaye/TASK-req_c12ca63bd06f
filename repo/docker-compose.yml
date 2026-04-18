@@ -1,0 +1,92 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hospitality_ops
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hospitality_ops"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      NODE_ENV: development
+      PORT: "3000"
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/hospitality_ops
+      JWT_ACCESS_SECRET: dev-access-secret-change-in-production-min-32-chars
+      JWT_REFRESH_SECRET: dev-refresh-secret-change-in-production-min-32-chars
+      JWT_ACCESS_TTL_MINUTES: "45"
+      JWT_REFRESH_TTL_DAYS: "10"
+      ENCRYPTION_KEY_HEX: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      UPLOAD_ROOT: /app/uploads
+      UPLOAD_MAX_MB: "25"
+      UPLOAD_ALLOWED_MIME: "application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,image/png,image/jpeg,image/gif,image/webp"
+      REDIS_URL: redis://redis:6379
+      CACHE_MODE: redis
+      ENABLE_SSR: "false"
+      ENABLE_TLS: "false"
+      BACKUP_ROOT: /app/backups
+      BACKUP_RETENTION_DAYS: "30"
+      SNAPSHOT_CRON: "0 23 * * *"
+      KEY_CLEANUP_CRON: "0 2 * * *"
+      CB_TIMEOUT_MS: "5000"
+      CB_ERROR_THRESHOLD_PERCENT: "10"
+      CB_ROLLING_WINDOW_MS: "60000"
+      CB_RESET_TIMEOUT_MS: "30000"
+      DRY_RUN_EXTERNAL_STUBS: "true"
+      FRONTEND_URL: http://localhost:5173
+      BACKEND_URL: http://backend:3000
+    volumes:
+      - uploads:/app/uploads
+      - backups:/app/backups
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+    environment:
+      VITE_API_URL: http://localhost:3000
+
+volumes:
+  pg_data:
+  uploads:
+  backups:

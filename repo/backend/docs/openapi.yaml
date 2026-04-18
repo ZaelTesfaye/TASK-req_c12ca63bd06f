@@ -1,0 +1,2354 @@
+openapi: 3.0.3
+info:
+  title: Hospitality Operations Management System API
+  description: Backend API for managing events, resources, reservations, recipes, inventory, entitlements, and operational workflows.
+  version: 1.0.0
+
+servers:
+  - url: /api
+    description: API base path
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT access token obtained from POST /auth/login or POST /auth/refresh.
+
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+          description: Machine-readable error code.
+        message:
+          type: string
+          description: Human-readable error description.
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+      required:
+        - error
+        - message
+
+    PaginatedResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items: {}
+        pagination:
+          type: object
+          properties:
+            cursor:
+              type: string
+              nullable: true
+            hasMore:
+              type: boolean
+            total:
+              type: integer
+
+    Event:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [draft, submitted, approved, in_service, closed]
+        budget:
+          type: number
+        created_by:
+          type: string
+          format: uuid
+        service_windows:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceWindow'
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    ServiceWindow:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        label:
+          type: string
+
+    Approval:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        subject_type:
+          type: string
+        subject_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        requested_by:
+          type: string
+          format: uuid
+        resolved_by:
+          type: string
+          format: uuid
+          nullable: true
+        reason:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        resolved_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+        resource_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [requested, approved, released, occupied, returned, overtime_pending, cancelled, rescheduled, renewed]
+        start_time:
+          type: string
+          format: date-time
+        end_time:
+          type: string
+          format: date-time
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    RecipeVersion:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        recipe_id:
+          type: string
+          format: uuid
+        version_number:
+          type: integer
+        title:
+          type: string
+        ingredients:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+              quantity:
+                type: number
+              unit:
+                type: string
+        steps:
+          type: array
+          items:
+            type: string
+        yield_amount:
+          type: number
+        yield_unit:
+          type: string
+        allergens:
+          type: array
+          items:
+            type: string
+        status:
+          type: string
+          enum: [draft, submitted, approved, rejected]
+        created_at:
+          type: string
+          format: date-time
+
+    InventorySnapshot:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        snapshot_date:
+          type: string
+          format: date
+        items:
+          type: array
+          items:
+            type: object
+            properties:
+              item_id:
+                type: string
+                format: uuid
+              expected_quantity:
+                type: number
+              actual_quantity:
+                type: number
+              gap:
+                type: number
+        created_at:
+          type: string
+          format: date-time
+
+    Entitlement:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type_id:
+          type: string
+          format: uuid
+        holder_id:
+          type: string
+          format: uuid
+        event_id:
+          type: string
+          format: uuid
+          nullable: true
+        status:
+          type: string
+          enum: [active, redeemed, expired, revoked]
+        issued_at:
+          type: string
+          format: date-time
+        redeemed_at:
+          type: string
+          format: date-time
+          nullable: true
+        idempotency_key:
+          type: string
+          nullable: true
+
+    Attachment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        parent_type:
+          type: string
+        parent_id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        mime_type:
+          type: string
+        size_bytes:
+          type: integer
+        uploaded_by:
+          type: string
+          format: uuid
+        created_at:
+          type: string
+          format: date-time
+
+    Resource:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        category_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [draft, published, unpublished]
+        attributes:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+
+    AuditLog:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        subject_type:
+          type: string
+        subject_id:
+          type: string
+          format: uuid
+        action:
+          type: string
+        metadata:
+          type: object
+        ip_address:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+
+paths:
+  # ── Auth ──────────────────────────────────────────────
+  /auth/register:
+    post:
+      tags: [Auth]
+      summary: Register a new user (username + password; no email)
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                  minLength: 3
+                  maxLength: 100
+                password:
+                  type: string
+                  minLength: 8
+                  maxLength: 128
+      responses:
+        '201':
+          description: User created. Returns the new user envelope; tokens are obtained via POST /auth/login.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      username:
+                        type: string
+                      status:
+                        type: string
+                        enum: [active, inactive, suspended]
+                      roles:
+                        type: array
+                        items:
+                          type: string
+        '422':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: Username already registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Authenticate with username + password and obtain JWT tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [username, password]
+              properties:
+                username:
+                  type: string
+                password:
+                  type: string
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [accessToken, refreshToken, expiresIn, user]
+                properties:
+                  accessToken:
+                    type: string
+                    description: "JWT access token. Pass as `Authorization: Bearer <accessToken>`."
+                  refreshToken:
+                    type: string
+                    description: Opaque UUID refresh token. Use with POST /auth/refresh.
+                  expiresIn:
+                    type: integer
+                    description: Access-token lifetime in seconds.
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        format: uuid
+                      username:
+                        type: string
+                      roles:
+                        type: array
+                        items:
+                          type: string
+                      permissions:
+                        type: array
+                        items:
+                          type: string
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken]
+              properties:
+                refreshToken:
+                  type: string
+      responses:
+        '200':
+          description: Token refreshed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                  refreshToken:
+                    type: string
+                  expiresIn:
+                    type: integer
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/logout:
+    post:
+      tags: [Auth]
+      summary: Invalidate refresh token
+      responses:
+        '204':
+          description: Logged out
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current user profile
+      responses:
+        '200':
+          description: Current user
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  username:
+                    type: string
+                  status:
+                    type: string
+                    enum: [active, inactive, suspended]
+                  roles:
+                    type: array
+                    items:
+                      type: string
+                  permissions:
+                    type: array
+                    items:
+                      type: string
+
+  /auth/change-password:
+    post:
+      tags: [Auth]
+      summary: Change current user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [currentPassword, newPassword]
+              properties:
+                currentPassword:
+                  type: string
+                newPassword:
+                  type: string
+                  minLength: 8
+      responses:
+        '204':
+          description: Password changed
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Events ────────────────────────────────────────────
+  /events:
+    get:
+      tags: [Events]
+      summary: List events (filtered by role/ownership)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, submitted, approved, in_service, closed]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated event list
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Event'
+    post:
+      tags: [Events]
+      summary: Create a new event
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                budget:
+                  type: number
+                service_windows:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      start_time:
+                        type: string
+                        format: date-time
+                      end_time:
+                        type: string
+                        format: date-time
+                      label:
+                        type: string
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}:
+    get:
+      tags: [Events]
+      summary: Get event by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      tags: [Events]
+      summary: Update event (Draft state only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                budget:
+                  type: number
+                service_windows:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      start_time:
+                        type: string
+                        format: date-time
+                      end_time:
+                        type: string
+                        format: date-time
+                      label:
+                        type: string
+      responses:
+        '200':
+          description: Event updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error or invalid state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/submit:
+    post:
+      tags: [Events]
+      summary: Submit event for approval
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Validation error (missing fields, invalid state)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/service:
+    post:
+      tags: [Events]
+      summary: Transition event to In Service
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event in service
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid state transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/close:
+    post:
+      tags: [Events]
+      summary: Close event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Event closed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+        '400':
+          description: Invalid state transition or unresolved items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /events/{id}/materials:
+    get:
+      tags: [Events]
+      summary: Get materials list for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Materials list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        quantity:
+                          type: number
+                        unit:
+                          type: string
+    put:
+      tags: [Events]
+      summary: Update materials list
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                materials:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      quantity:
+                        type: number
+                      unit:
+                        type: string
+      responses:
+        '200':
+          description: Materials updated
+
+  /events/{id}/resource-requests:
+    get:
+      tags: [Events]
+      summary: List resource requests for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource requests
+    post:
+      tags: [Events]
+      summary: Create a resource request for an event
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resource_id, quantity]
+              properties:
+                resource_id:
+                  type: string
+                  format: uuid
+                quantity:
+                  type: integer
+                notes:
+                  type: string
+      responses:
+        '201':
+          description: Resource request created
+        '400':
+          description: Validation error or quota exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Approvals ─────────────────────────────────────────
+  /approvals:
+    get:
+      tags: [Approvals]
+      summary: List pending approvals for current user
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, approved, rejected]
+        - name: subject_type
+          in: query
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated approvals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Approval'
+
+  /approvals/{id}/approve:
+    post:
+      tags: [Approvals]
+      summary: Approve a pending request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          description: Already resolved or self-approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /approvals/{id}/reject:
+    post:
+      tags: [Approvals]
+      summary: Reject a pending request
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Approval'
+        '400':
+          description: Already resolved or self-approval
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Reservations ──────────────────────────────────────
+  /reservations:
+    get:
+      tags: [Reservations]
+      summary: List reservations (filtered by scope)
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: event_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: resource_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated reservations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Reservation'
+    post:
+      tags: [Reservations]
+      summary: Request a new reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [event_id, resource_id, start_time, end_time]
+              properties:
+                event_id:
+                  type: string
+                  format: uuid
+                resource_id:
+                  type: string
+                  format: uuid
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Reservation requested
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+        '400':
+          description: Validation error or conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /reservations/{id}:
+    get:
+      tags: [Reservations]
+      summary: Get reservation by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+
+  /reservations/{id}/approve:
+    post:
+      tags: [Reservations]
+      summary: Approve a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reservation approved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Reservation'
+
+  /reservations/{id}/release:
+    post:
+      tags: [Reservations]
+      summary: Release resource for use
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource released
+
+  /reservations/{id}/occupy:
+    post:
+      tags: [Reservations]
+      summary: Mark resource as occupied
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource occupied
+
+  /reservations/{id}/return:
+    post:
+      tags: [Reservations]
+      summary: Return resource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                condition:
+                  type: string
+      responses:
+        '200':
+          description: Resource returned
+
+  /reservations/{id}/overtime-approve:
+    post:
+      tags: [Reservations]
+      summary: Approve overtime for a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Overtime approved
+
+  /reservations/{id}/cancel:
+    post:
+      tags: [Reservations]
+      summary: Cancel a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Reservation cancelled
+
+  /reservations/{id}/reschedule:
+    post:
+      tags: [Reservations]
+      summary: Reschedule a reservation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [start_time, end_time]
+              properties:
+                start_time:
+                  type: string
+                  format: date-time
+                end_time:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Reservation rescheduled
+
+  # ── Recipes ───────────────────────────────────────────
+  /recipes:
+    get:
+      tags: [Recipes]
+      summary: List recipes
+      parameters:
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated recipes
+    post:
+      tags: [Recipes]
+      summary: Create a new recipe
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Recipe created
+
+  /recipes/{id}:
+    get:
+      tags: [Recipes]
+      summary: Get recipe with versions
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Recipe details with version history
+
+  /recipes/{id}/versions:
+    post:
+      tags: [Recipes]
+      summary: Create a new version of a recipe
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ingredients, steps, yield_amount, yield_unit, allergens]
+              properties:
+                ingredients:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      quantity:
+                        type: number
+                      unit:
+                        type: string
+                steps:
+                  type: array
+                  items:
+                    type: string
+                yield_amount:
+                  type: number
+                yield_unit:
+                  type: string
+                allergens:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RecipeVersion'
+
+  /recipes/{recipeId}/versions/{versionId}/submit:
+    post:
+      tags: [Recipes]
+      summary: Submit version for review
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version submitted
+
+  /recipes/{recipeId}/versions/{versionId}/approve:
+    post:
+      tags: [Recipes]
+      summary: Approve a recipe version
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Version approved
+
+  /recipes/{recipeId}/versions/{versionId}/reject:
+    post:
+      tags: [Recipes]
+      summary: Reject a recipe version
+      parameters:
+        - name: recipeId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Version rejected
+
+  # ── Inventory ─────────────────────────────────────────
+  /inventory/snapshots:
+    get:
+      tags: [Inventory]
+      summary: List inventory snapshots
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated snapshots
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/InventorySnapshot'
+
+  /inventory/snapshots/{id}:
+    get:
+      tags: [Inventory]
+      summary: Get snapshot details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Snapshot details
+
+  /inventory/gaps:
+    get:
+      tags: [Inventory]
+      summary: List unresolved inventory gaps
+      responses:
+        '200':
+          description: Gap list
+
+  /inventory/gaps/{id}/resolve:
+    post:
+      tags: [Inventory]
+      summary: Resolve an inventory gap
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [resolution_method, notes]
+              properties:
+                resolution_method:
+                  type: string
+                  enum: [recount, adjustment, write_off]
+                notes:
+                  type: string
+      responses:
+        '200':
+          description: Gap resolved
+
+  /inventory/export:
+    get:
+      tags: [Inventory]
+      summary: Export inventory data
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+        - name: date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Exported data
+          content:
+            text/csv: {}
+            application/json: {}
+
+  # ── Entitlements ──────────────────────────────────────
+  /entitlements:
+    get:
+      tags: [Entitlements]
+      summary: List entitlements
+      parameters:
+        - name: holder_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: event_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [active, redeemed, expired, revoked]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: Paginated entitlements
+    post:
+      tags: [Entitlements]
+      summary: Issue an entitlement (manual)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type_id, holder_id]
+              properties:
+                type_id:
+                  type: string
+                  format: uuid
+                holder_id:
+                  type: string
+                  format: uuid
+                event_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Entitlement issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+
+  /entitlements/bulk-import:
+    post:
+      tags: [Entitlements]
+      summary: Bulk import entitlements via CSV
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Import results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  imported:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        row:
+                          type: integer
+                        message:
+                          type: string
+
+  /entitlements/{id}/redeem:
+    post:
+      tags: [Entitlements]
+      summary: Redeem an entitlement (idempotent)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotency_key]
+              properties:
+                idempotency_key:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Entitlement redeemed (or already redeemed with same key)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entitlement'
+        '400':
+          description: Already redeemed with different key or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /entitlements/types:
+    get:
+      tags: [Entitlements]
+      summary: List entitlement types
+      responses:
+        '200':
+          description: Entitlement types
+    post:
+      tags: [Entitlements]
+      summary: Create entitlement type
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '201':
+          description: Type created
+
+  # ── Attachments ───────────────────────────────────────
+  /attachments:
+    post:
+      tags: [Attachments]
+      summary: Upload an attachment
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, parent_type, parent_id]
+              properties:
+                file:
+                  type: string
+                  format: binary
+                parent_type:
+                  type: string
+                  enum: [event, recipe_version]
+                parent_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Attachment uploaded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Attachment'
+        '400':
+          description: Invalid file type or size
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /attachments/{id}:
+    get:
+      tags: [Attachments]
+      summary: Download attachment
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: File content
+          content:
+            application/octet-stream: {}
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      tags: [Attachments]
+      summary: Delete attachment (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  # ── Catalog (Resources) ──────────────────────────────
+  /catalog/tree:
+    get:
+      tags: [Catalog]
+      summary: Get full resource catalog tree
+      responses:
+        '200':
+          description: Catalog tree (cached)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        name:
+                          type: string
+                        children:
+                          type: array
+                          items: {}
+
+  /catalog/categories:
+    get:
+      tags: [Catalog]
+      summary: List resource categories
+      responses:
+        '200':
+          description: Categories
+    post:
+      tags: [Catalog]
+      summary: Create a resource category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name:
+                  type: string
+                parent_id:
+                  type: string
+                  format: uuid
+      responses:
+        '201':
+          description: Category created
+
+  /catalog/resources:
+    get:
+      tags: [Catalog]
+      summary: List resources
+      parameters:
+        - name: category_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [draft, published, unpublished]
+      responses:
+        '200':
+          description: Resources
+    post:
+      tags: [Catalog]
+      summary: Create a resource
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category_id]
+              properties:
+                name:
+                  type: string
+                category_id:
+                  type: string
+                  format: uuid
+                attributes:
+                  type: object
+      responses:
+        '201':
+          description: Resource created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+
+  /catalog/resources/{id}:
+    get:
+      tags: [Catalog]
+      summary: Get resource details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Resource'
+    put:
+      tags: [Catalog]
+      summary: Update resource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                attributes:
+                  type: object
+      responses:
+        '200':
+          description: Resource updated
+
+  /catalog/resources/{id}/publish:
+    post:
+      tags: [Catalog]
+      summary: Publish a resource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource published
+
+  /catalog/resources/{id}/unpublish:
+    post:
+      tags: [Catalog]
+      summary: Unpublish a resource
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Resource unpublished
+
+  /catalog/templates:
+    get:
+      tags: [Catalog]
+      summary: List resource templates
+      responses:
+        '200':
+          description: Templates
+    post:
+      tags: [Catalog]
+      summary: Create a resource template
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, category_id, attributes_schema]
+              properties:
+                name:
+                  type: string
+                category_id:
+                  type: string
+                  format: uuid
+                attributes_schema:
+                  type: object
+      responses:
+        '201':
+          description: Template created
+
+  # ── Check-in ──────────────────────────────────────────
+  /check-in:
+    post:
+      tags: [Check-in]
+      summary: Process a check-in (tablet interface)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [entitlement_id, idempotency_key]
+              properties:
+                entitlement_id:
+                  type: string
+                  format: uuid
+                idempotency_key:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Check-in successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    enum: [checked_in, already_checked_in]
+                  entitlement:
+                    $ref: '#/components/schemas/Entitlement'
+        '400':
+          description: Invalid entitlement or already redeemed with different key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /check-in/verify/{entitlementId}:
+    get:
+      tags: [Check-in]
+      summary: Verify entitlement status before check-in
+      parameters:
+        - name: entitlementId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Entitlement verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                  entitlement:
+                    $ref: '#/components/schemas/Entitlement'
+                  reason:
+                    type: string
+
+  # ── Reports ───────────────────────────────────────────
+  /reports/events:
+    get:
+      tags: [Reports]
+      summary: Export events report
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+        - name: status
+          in: query
+          schema:
+            type: string
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Report data
+          content:
+            text/csv: {}
+            application/json: {}
+
+  /reports/inventory:
+    get:
+      tags: [Reports]
+      summary: Export inventory report
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Report data
+
+  /reports/entitlements:
+    get:
+      tags: [Reports]
+      summary: Export entitlements report
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Report data
+
+  /reports/reservations:
+    get:
+      tags: [Reports]
+      summary: Export reservations report
+      parameters:
+        - name: format
+          in: query
+          schema:
+            type: string
+            enum: [csv, json]
+            default: csv
+      responses:
+        '200':
+          description: Report data
+
+  # ── Admin ─────────────────────────────────────────────
+  /admin/users:
+    get:
+      tags: [Admin]
+      summary: List all users
+      responses:
+        '200':
+          description: User list
+
+  /admin/users/{id}/roles:
+    put:
+      tags: [Admin]
+      summary: Assign roles to a user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [roles]
+              properties:
+                roles:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: Roles updated
+
+  /admin/users/{id}/manager-scope:
+    put:
+      tags: [Admin]
+      summary: Set manager scope for a resource manager
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [category_ids]
+              properties:
+                category_ids:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+      responses:
+        '200':
+          description: Scope updated
+
+  /admin/cache:
+    delete:
+      tags: [Admin]
+      summary: Purge cache (all or by pattern)
+      parameters:
+        - name: pattern
+          in: query
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Cache purged
+
+  /admin/cache/{key}:
+    delete:
+      tags: [Admin]
+      summary: Purge a single cache key
+      parameters:
+        - name: key
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Key purged
+
+  /admin/backup:
+    post:
+      tags: [Admin]
+      summary: Trigger a manual backup
+      responses:
+        '200':
+          description: Backup started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  backup_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+
+  /admin/backup/drill:
+    post:
+      tags: [Admin]
+      summary: Initiate a disaster recovery drill
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                backup_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Drill started
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  drill_id:
+                    type: string
+                    format: uuid
+                  status:
+                    type: string
+
+  /admin/backup/drill/{id}:
+    get:
+      tags: [Admin]
+      summary: Get drill status and results
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Drill results
+
+  /admin/data-collection:
+    get:
+      tags: [Admin]
+      summary: Get data collection configuration
+      responses:
+        '200':
+          description: Configuration
+    put:
+      tags: [Admin]
+      summary: Update data collection configuration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                enabled:
+                  type: boolean
+                settings:
+                  type: object
+      responses:
+        '200':
+          description: Configuration updated
+
+  /admin/audit-logs:
+    get:
+      tags: [Admin]
+      summary: Query audit logs
+      parameters:
+        - name: subject_type
+          in: query
+          schema:
+            type: string
+        - name: action
+          in: query
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          schema:
+            type: string
+            format: uuid
+        - name: from_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: to_date
+          in: query
+          schema:
+            type: string
+            format: date-time
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+      responses:
+        '200':
+          description: Paginated audit logs
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/PaginatedResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/AuditLog'
