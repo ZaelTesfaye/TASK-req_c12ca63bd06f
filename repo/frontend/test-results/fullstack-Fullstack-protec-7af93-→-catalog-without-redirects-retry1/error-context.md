@@ -12,7 +12,7 @@
 # Error details
 
 ```
-Error: apiRequestContext.post: connect ECONNREFUSED 172.22.0.3:3000
+Error: apiRequestContext.post: connect ECONNREFUSED 172.22.0.5:3000
 Call log:
   - → POST http://backend:3000/auth/login
     - user-agent: Playwright/1.59.1 (x64; ubuntu 22.04) node/20.9 CI/1
@@ -59,7 +59,7 @@ Call log:
   31  |  */
   32  | async function apiLogin(request, username, password) {
 > 33  |   const res = await request.post(`${BACKEND_URL}/auth/login`, {
-      |                             ^ Error: apiRequestContext.post: connect ECONNREFUSED 172.22.0.3:3000
+      |                             ^ Error: apiRequestContext.post: connect ECONNREFUSED 172.22.0.5:3000
   34  |     data: { username, password },
   35  |   });
   36  |   expect(res.ok(), `login for ${username} should succeed`).toBeTruthy();

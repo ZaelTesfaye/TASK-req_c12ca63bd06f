@@ -79,14 +79,18 @@ beforeAll(async () => {
   });
   eventId = JSON.parse(evt.payload).data.id;
 
-  // Grant manager scope for this event
+  // Grant manager scope for this event. The approver needs a scope row
+  // too — reservations/service.js::approveOvertime calls assertEventScope
+  // before mutating state, so the approve-overtime route 403s even for
+  // a caller that holds reservation:overtime_approve if they lack a
+  // scope record for the target event.
   const adminUser = await db('users').where({ username: 'admin' }).first();
   const managerUser = await db('users').where({ username: 'manager' }).first();
-  await db('manager_event_scopes').insert({
-    user_id: managerUser.id,
-    event_id: eventId,
-    assigned_by: adminUser.id,
-  });
+  const approverUser = await db('users').where({ username: 'approver' }).first();
+  await db('manager_event_scopes').insert([
+    { user_id: managerUser.id, event_id: eventId, assigned_by: adminUser.id },
+    { user_id: approverUser.id, event_id: eventId, assigned_by: adminUser.id },
+  ]);
 
   const [resource] = await db('resources')
     .insert({

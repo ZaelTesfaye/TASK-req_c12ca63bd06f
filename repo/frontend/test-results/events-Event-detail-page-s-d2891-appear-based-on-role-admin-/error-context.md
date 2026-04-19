@@ -12,18 +12,28 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_CONNECTION_REFUSED at http://frontend:5173/events/evt-1
-Call log:
-  - navigating to "http://frontend:5173/events/evt-1", waiting until "load"
+Error: expect(locator).toBeVisible() failed
 
+Locator: locator('text=Submit for Approval')
+Expected: visible
+Timeout: 10000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toBeVisible" with timeout 10000ms
+  - waiting for locator('text=Submit for Approval')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  167 | 
-  168 |   test('filter controls are present', async ({ page }) => {
-  169 |     await setupAuthenticatedSession(page);
   170 |     await setupEventRoutes(page);
   171 | 
   172 |     await page.goto('/events');
@@ -121,11 +131,11 @@ Call log:
   264 |     await setupAuthenticatedSession(page, { role: 'admin' });
   265 |     await setupEventRoutes(page);
   266 | 
-> 267 |     await page.goto('/events/evt-1');
-      |                ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://frontend:5173/events/evt-1
+  267 |     await page.goto('/events/evt-1');
   268 | 
   269 |     // Draft event with admin role should show "Submit for Approval" button
-  270 |     await expect(page.locator('text=Submit for Approval')).toBeVisible({ timeout: 10000 });
+> 270 |     await expect(page.locator('text=Submit for Approval')).toBeVisible({ timeout: 10000 });
+      |                                                            ^ Error: expect(locator).toBeVisible() failed
   271 |   });
   272 | 
   273 |   test('event detail shows budget information', async ({ page }) => {

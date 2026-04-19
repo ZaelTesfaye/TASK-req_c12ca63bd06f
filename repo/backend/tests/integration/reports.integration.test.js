@@ -19,7 +19,13 @@ beforeAll(async () => {
   analystToken = await loginAs(app, 'analyst', 'analyst123!');
   chefToken = await loginAs(app, 'chef', 'chef123!');
 
-  // Seed minimum inventory/snapshot data so the inventory export has rows
+  // The inventory export service blocks with 409 UNRESOLVED_GAPS if ANY
+  // inventory item is missing a snapshot for ANY day in the requested
+  // range. Seed 004_sample_data.js also inserts items (Flour, Chicken,
+  // Olive Oil, Tables, Chairs). To make the happy-path test pass we
+  // need to guarantee EVERY existing item has a snapshot for EVERY day
+  // in the narrow window the test queries. We pick a single date and
+  // backfill a snapshot for every item on that date.
   const [item] = await db('inventory_items')
     .insert({
       name: 'Report Test Flour',
@@ -29,12 +35,18 @@ beforeAll(async () => {
       current_unit_price: 3,
     })
     .returning('*');
-  await db('inventory_snapshots').insert({
-    item_id: item.id,
+
+  const allItems = await db('inventory_items').select('id');
+  const snapshotRows = allItems.map(({ id }) => ({
+    item_id: id,
     snapshot_date: '2025-06-10',
     quantity: 50,
     unit_price: 3,
-  });
+  }));
+  await db('inventory_snapshots')
+    .insert(snapshotRows)
+    .onConflict(['item_id', 'snapshot_date'])
+    .ignore();
 }, 30000);
 
 afterAll(async () => {
@@ -44,9 +56,11 @@ afterAll(async () => {
 
 describe('GET /reports/inventory/export (real DB)', () => {
   it('returns 200 with Content-Type: text/csv and non-empty body', async () => {
+    // Single-day window that matches the snapshot beforeAll seeded for
+    // every inventory item — zero gaps, so the export is allowed through.
     const res = await app.inject({
       method: 'GET',
-      url: '/reports/inventory/export?from_date=2025-06-01&to_date=2025-06-30',
+      url: '/reports/inventory/export?from_date=2025-06-10&to_date=2025-06-10',
       headers: { Authorization: `Bearer ${analystToken}` },
     });
     expect(res.statusCode).toBe(200);
@@ -57,7 +71,7 @@ describe('GET /reports/inventory/export (real DB)', () => {
   it('returns 403 for a role without inventory:export', async () => {
     const res = await app.inject({
       method: 'GET',
-      url: '/reports/inventory/export?from_date=2025-06-01&to_date=2025-06-30',
+      url: '/reports/inventory/export?from_date=2025-06-10&to_date=2025-06-10',
       headers: { Authorization: `Bearer ${chefToken}` },
     });
     expect(res.statusCode).toBe(403);

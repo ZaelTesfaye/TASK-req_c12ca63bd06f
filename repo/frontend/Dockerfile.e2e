@@ -1,0 +1,44 @@
+# Dedicated image for the Playwright test fork so:
+# 1. `npm ci` runs at BUILD time (not on every `./run_tests.sh`), and
+# 2. Chromium + its system deps live in the image (the
+#    mcr.microsoft.com/playwright:* base already has them — we don't
+#    re-run `npx playwright install` at runtime).
+#
+# IMPORTANT: the tag MUST match the @playwright/test version resolved in
+# package-lock.json. The npm client and the bundled browsers are versioned
+# together — a mismatch produces:
+#   "Executable doesn't exist at /ms-playwright/.../chrome-headless-shell"
+# at every test launch. package-lock currently pins 1.59.1, so the image
+# tag is v1.59.1-jammy. When you bump @playwright/test, bump this tag too.
+FROM mcr.microsoft.com/playwright:v1.59.1-jammy
+WORKDIR /app
+
+# Reinstall Chromium's system libraries. The Playwright base image
+# ships them, but on Docker Desktop (Windows/WSL) image extraction has
+# repeatedly corrupted /lib/x86_64-linux-gnu/libxcb.so.1 — Chromium
+# then fails to launch with:
+#   error while loading shared libraries: libxcb.so.1: file too short
+# `--reinstall` overwrites the truncated files with fresh copies from
+# apt, and `playwright install-deps` is the official idempotent way to
+# guarantee every dependency Chromium needs is present & intact.
+RUN apt-get update \
+ && apt-get install -y --reinstall --no-install-recommends \
+      libxcb1 libxcb-shape0 libxcb-render0 libxcb-shm0 libxcb-randr0 \
+      libxcb-xfixes0 libxcb-sync1 libxcb-present0 libxcb-dri2-0 \
+      libxcb-dri3-0 libxcb-glx0 libx11-6 libx11-xcb1 libxcomposite1 \
+      libxdamage1 libxext6 libxfixes3 libxrandr2 libxrender1 libxkbcommon0 \
+      libgbm1 libnss3 libatk1.0-0 libatk-bridge2.0-0 libcups2 libdrm2 \
+      libxss1 libasound2 libpango-1.0-0 libcairo2 \
+ && npx playwright install-deps chromium \
+ && rm -rf /var/lib/apt/lists/*
+
+# Dependency layer — cached until package.json/package-lock.json change.
+COPY package*.json ./
+RUN npm ci --no-audit --no-fund
+
+# Source + test files.
+COPY . .
+
+# Default entrypoint runs the Playwright suite against whatever
+# PLAYWRIGHT_BASE_URL the compose file points at.
+CMD ["npx", "playwright", "test", "--reporter=list"]

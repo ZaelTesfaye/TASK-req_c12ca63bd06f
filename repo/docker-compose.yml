@@ -1,4 +1,12 @@
-version: "3.9"
+# Explicit project name. Without this, compose defaults the project
+# name to the parent directory name ("repo"), which collides with an
+# unrelated project on this dev machine that *also* lives in a folder
+# named "repo" — that other project happens to be a PHP app, and its
+# builds kept overwriting our `repo-backend:latest` tag with a PHP
+# image. Using a unique name isolates our image tags and container
+# names ("hospitalityops-backend:latest", "hospitalityops-backend-1",
+# etc.) so cross-project clobbering can't happen.
+name: hospitalityops
 
 services:
   postgres:
@@ -8,22 +16,35 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: hospitality_ops
-    ports:
-      - "5432:5432"
+    # No host port binding: this dev machine already has a native
+    # postgres listening on 5432, and Docker Desktop on Windows handles
+    # port collisions poorly (the container silently exits (0) instead
+    # of failing loudly). Other compose services reach postgres via the
+    # internal `postgres:5432` hostname on the compose network. If you
+    # ever need host access, use `docker compose exec postgres psql`.
     volumes:
       - pg_data:/var/lib/postgresql/data
+    # The first time this project boots a fresh `hospitalityops_pg_data`
+    # volume, postgres runs `initdb` from scratch — on Docker Desktop's
+    # WSL-backed filesystem this can take 30–90 seconds, well past the
+    # previous 60s healthcheck budget. Bumping to 300s total
+    # (start_period 60s + 60*4s = 240s interval retries = 300s) keeps
+    # cold-start runs from hitting "dependency failed to start: postgres
+    # is unhealthy" while still catching genuinely broken containers.
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d hospitality_ops"]
-      interval: 5s
+      interval: 4s
       timeout: 5s
-      retries: 10
-      start_period: 10s
+      retries: 60
+      start_period: 60s
 
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # Same reason as postgres above — host already has a native redis
+    # on 6379. Access redis via the `redis:6379` hostname inside the
+    # compose network; use `docker compose exec redis redis-cli` for
+    # host-side debugging.
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -43,6 +64,25 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+    # Compose needs an explicit healthcheck on the backend so e2e-test can
+    # wait with `condition: service_healthy` instead of the script polling
+    # the /health endpoint out-of-band. The backend image installs curl.
+    #
+    # Use 127.0.0.1 (not `localhost`) to avoid IPv6/IPv4 name-resolution
+    # ambiguity inside the alpine container — Fastify binds to 0.0.0.0
+    # (IPv4 only), so if `localhost` resolved to ::1 the curl would fail.
+    #
+    # Budget: start_period (60s) + retries*interval (60 * 5s = 300s) =
+    # 360s total. The previous 120s budget timed out on cold starts
+    # under Docker Desktop's slow WSL VHD disk I/O (compose would then
+    # abort the e2e-test stage with "dependency failed to start:
+    # container repo-backend-1 is unhealthy").
+    healthcheck:
+      test: ["CMD", "curl", "-fs", "http://127.0.0.1:3000/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 60s
     environment:
       NODE_ENV: development
       PORT: "3000"

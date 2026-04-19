@@ -12,28 +12,19 @@
 # Error details
 
 ```
-Error: expect(locator).toBeVisible() failed
-
-Locator: locator('nav[aria-label="Main navigation"]')
-Expected: visible
-Timeout: 10000ms
-Error: element(s) not found
-
+Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/dashboard
 Call log:
-  - Expect "toBeVisible" with timeout 10000ms
-  - waiting for locator('nav[aria-label="Main navigation"]')
+  - navigating to "http://frontend:5173/dashboard", waiting until "load"
 
-```
-
-# Page snapshot
-
-```yaml
-- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
+  14  |   const defaultPermissions = {
+  15  |     admin: [
+  16  |       'event:read', 'event:create', 'event:update', 'event:submit',
+  17  |       'event:approve', 'event:service', 'event:close',
   18  |       'reservation:request', 'recipe:create', 'inventory:read',
   19  |       'entitlement:redeem', 'reports:export', 'admin:roles'
   20  |     ],
@@ -130,12 +121,12 @@ Call log:
   111 |     await setupAuth(page, { role: 'admin' });
   112 |     await setupDashboardAPIs(page);
   113 | 
-  114 |     await page.goto('/dashboard');
+> 114 |     await page.goto('/dashboard');
+      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/dashboard
   115 | 
   116 |     // Wait for the navigation to render
   117 |     const nav = page.locator('nav[aria-label="Main navigation"]');
-> 118 |     await expect(nav).toBeVisible({ timeout: 10000 });
-      |                       ^ Error: expect(locator).toBeVisible() failed
+  118 |     await expect(nav).toBeVisible({ timeout: 10000 });
   119 | 
   120 |     // Check that all major nav items are visible
   121 |     await expect(nav.locator('text=Dashboard')).toBeVisible();

@@ -12,10 +12,20 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
-Call log:
-  - navigating to "http://frontend:5173/login", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: page.click: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('button[type="submit"]')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
@@ -118,11 +128,11 @@ Call log:
   95  |   });
   96  | 
   97  |   test('empty form shows validation errors', async ({ page }) => {
-> 98  |     await page.goto('/login');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
+  98  |     await page.goto('/login');
   99  | 
   100 |     // Click submit with empty fields
-  101 |     await page.click('button[type="submit"]');
+> 101 |     await page.click('button[type="submit"]');
+      |                ^ Error: page.click: Test timeout of 30000ms exceeded.
   102 | 
   103 |     // Validation errors should appear
   104 |     await expect(page.locator('text=Username is required')).toBeVisible();

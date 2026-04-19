@@ -12,10 +12,20 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
-Call log:
-  - navigating to "http://frontend:5173/login", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: page.fill: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('#username')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
@@ -107,10 +117,10 @@ Call log:
   84  |   test('invalid credentials show error message', async ({ page }) => {
   85  |     await setupLoginMocks(page, { success: false });
   86  | 
-> 87  |     await page.goto('/login');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
+  87  |     await page.goto('/login');
   88  | 
-  89  |     await page.fill('#username', 'wronguser');
+> 89  |     await page.fill('#username', 'wronguser');
+      |                ^ Error: page.fill: Test timeout of 30000ms exceeded.
   90  |     await page.fill('#password', 'wrongpass123');
   91  |     await page.click('button[type="submit"]');
   92  | 

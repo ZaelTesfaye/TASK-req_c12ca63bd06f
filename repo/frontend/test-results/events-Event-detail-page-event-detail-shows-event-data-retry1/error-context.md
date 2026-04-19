@@ -12,17 +12,28 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/evt-1
-Call log:
-  - navigating to "http://frontend:5173/events/evt-1", waiting until "load"
+Error: expect(locator).toContainText(expected) failed
 
+Locator: locator('h1')
+Expected substring: "Annual Gala"
+Timeout: 10000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toContainText" with timeout 10000ms
+  - waiting for locator('h1')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  156 |     await expect(page.locator('h1')).toContainText('Events');
-  157 |   });
   158 | 
   159 |   test('create event button is visible for users with event:create permission', async ({ page }) => {
   160 |     await setupAuthenticatedSession(page);
@@ -121,10 +132,10 @@ Call log:
   253 |     await setupAuthenticatedSession(page);
   254 |     await setupEventRoutes(page);
   255 | 
-> 256 |     await page.goto('/events/evt-1');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/evt-1
+  256 |     await page.goto('/events/evt-1');
   257 | 
-  258 |     await expect(page.locator('h1')).toContainText('Annual Gala', { timeout: 10000 });
+> 258 |     await expect(page.locator('h1')).toContainText('Annual Gala', { timeout: 10000 });
+      |                                      ^ Error: expect(locator).toContainText(expected) failed
   259 |     await expect(page.locator('text=200 guests')).toBeVisible();
   260 |     await expect(page.locator('text=2025-07-15')).toBeVisible();
   261 |   });

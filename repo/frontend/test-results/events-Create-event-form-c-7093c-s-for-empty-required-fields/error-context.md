@@ -12,18 +12,25 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/new
-Call log:
-  - navigating to "http://frontend:5173/events/new", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: page.fill: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('input[type="number"][min="1"]')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  139 | 
-  140 | // ---------------------------------------------------------------------------
-  141 | // Tests
   142 | // ---------------------------------------------------------------------------
   143 | 
   144 | test.describe('Events list page', () => {
@@ -121,11 +128,11 @@ Call log:
   236 |     await setupAuthenticatedSession(page);
   237 |     await setupEventRoutes(page);
   238 | 
-> 239 |     await page.goto('/events/new');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/new
+  239 |     await page.goto('/events/new');
   240 | 
   241 |     // Clear the pre-filled headcount and set to 0
-  242 |     await page.fill('input[type="number"][min="1"]', '0');
+> 242 |     await page.fill('input[type="number"][min="1"]', '0');
+      |                ^ Error: page.fill: Test timeout of 30000ms exceeded.
   243 | 
   244 |     // Submit with empty required fields
   245 |     await page.click('button[type="submit"]');

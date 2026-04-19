@@ -12,25 +12,16 @@
 # Error details
 
 ```
-Test timeout of 30000ms exceeded.
-```
-
-```
-Error: locator.click: Test timeout of 30000ms exceeded.
+Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/reservations
 Call log:
-  - waiting for getByRole('button', { name: /Approve OT/i })
+  - navigating to "http://frontend:5173/reservations", waiting until "load"
 
-```
-
-# Page snapshot
-
-```yaml
-- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
+  23  |   resource_id: 'resrc-1',
   24  |   resource_name: 'Ballroom A',
   25  |   resource_type: 'space',
   26  |   status: 'occupied',
@@ -130,9 +121,9 @@ Call log:
   120 |     await setupAuth(page);
   121 |     await setupReservationRoutes(page);
   122 | 
-  123 |     await page.goto('/reservations');
-> 124 |     await page.getByRole('button', { name: /Approve OT/i }).click();
-      |                                                             ^ Error: locator.click: Test timeout of 30000ms exceeded.
+> 123 |     await page.goto('/reservations');
+      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/reservations
+  124 |     await page.getByRole('button', { name: /Approve OT/i }).click();
   125 | 
   126 |     const confirmBtn = page.getByRole('button', { name: 'Confirm' });
   127 |     const justification = page.locator('#overtime-justification');

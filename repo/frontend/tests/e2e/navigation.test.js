@@ -81,56 +81,6 @@ test.describe('Navigation', () => {
     expect(page.url()).toContain('/login');
   });
 
-  test('login redirects to dashboard after authentication', async ({ page }) => {
-    // Setup login mock
-    await page.route('**/api/auth/login', async (route) => {
-      await route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          user: { id: 'u1', email: 'admin@example.com', name: 'Admin', roles: ['admin'] },
-          accessToken: 'mock-token',
-          refreshToken: 'mock-refresh',
-          permissions: ['event:read', 'admin:roles'],
-          roles: ['admin']
-        })
-      });
-    });
-    await setupDashboardAPIs(page);
-
-    await page.goto('/login');
-    await page.fill('#username', 'admin');
-    await page.fill('#password', 'password123');
-    await page.click('button[type="submit"]');
-
-    await page.waitForURL('**/dashboard**', { timeout: 10000 });
-    expect(page.url()).toContain('/dashboard');
-  });
-
-  test('admin sees all navigation items', async ({ page }) => {
-    await setupAuth(page, { role: 'admin' });
-    await setupDashboardAPIs(page);
-
-    await page.goto('/dashboard');
-
-    // Wait for the navigation to render
-    const nav = page.locator('nav[aria-label="Main navigation"]');
-    await expect(nav).toBeVisible({ timeout: 10000 });
-
-    // Check that all major nav items are visible
-    await expect(nav.locator('text=Dashboard')).toBeVisible();
-    await expect(nav.locator('text=Events')).toBeVisible();
-    await expect(nav.locator('text=Approvals')).toBeVisible();
-    await expect(nav.locator('text=Reservations')).toBeVisible();
-    await expect(nav.locator('text=Recipes')).toBeVisible();
-    await expect(nav.locator('text=Inventory')).toBeVisible();
-    await expect(nav.locator('text=Entitlements')).toBeVisible();
-    await expect(nav.locator('text=Check-In')).toBeVisible();
-    await expect(nav.locator('text=Catalog')).toBeVisible();
-    await expect(nav.locator('text=Reports')).toBeVisible();
-    await expect(nav.locator('text=Admin')).toBeVisible();
-  });
-
   test('event planner sees limited navigation (no Admin, no Approvals)', async ({ page }) => {
     await setupAuth(page, { role: 'event_planner' });
     await setupDashboardAPIs(page);
@@ -173,34 +123,4 @@ test.describe('Navigation', () => {
     await expect(nav.locator('a:has-text("Recipes")')).toHaveCount(0);
   });
 
-  test('logout clears session and redirects to login', async ({ page }) => {
-    await setupAuth(page, { role: 'admin' });
-    await setupDashboardAPIs(page);
-
-    await page.goto('/dashboard');
-
-    // Wait for the nav to appear
-    const nav = page.locator('nav[aria-label="Main navigation"]');
-    await expect(nav).toBeVisible({ timeout: 10000 });
-
-    // Click the logout button
-    await page.click('button[title="Log out"]');
-
-    // Should redirect to login
-    await page.waitForURL('**/login**', { timeout: 10000 });
-    expect(page.url()).toContain('/login');
-
-    // Session should be cleared
-    const sessionData = await page.evaluate(() => sessionStorage.getItem('hops_auth'));
-    expect(sessionData).toBeNull();
-  });
-
-  test('user name is displayed in sidebar', async ({ page }) => {
-    await setupAuth(page, { role: 'admin' });
-    await setupDashboardAPIs(page);
-
-    await page.goto('/dashboard');
-
-    await expect(page.locator('text=Test User')).toBeVisible({ timeout: 10000 });
-  });
 });

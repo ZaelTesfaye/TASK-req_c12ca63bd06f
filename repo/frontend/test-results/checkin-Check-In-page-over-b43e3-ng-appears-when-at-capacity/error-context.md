@@ -12,17 +12,25 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/check-in
-Call log:
-  - navigating to "http://frontend:5173/check-in", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: locator.selectOption: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('select')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  96  |         })),
-  97  |       });
   98  |     } else {
   99  |       // POST — the service returns { data: { checkIn, warning, warningMessage, occupancy } }
   100 |       const body = route.request().postDataJSON();
@@ -121,10 +129,10 @@ Call log:
   193 |     await setupAuth(page);
   194 |     await setupCheckInRoutes(page, { overCap: true });
   195 | 
-> 196 |     await page.goto('/check-in');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/check-in
+  196 |     await page.goto('/check-in');
   197 | 
-  198 |     await page.locator('select').selectOption('evt-1');
+> 198 |     await page.locator('select').selectOption('evt-1');
+      |                                  ^ Error: locator.selectOption: Test timeout of 30000ms exceeded.
   199 | 
   200 |     // Over-capacity warning should be visible
   201 |     await expect(page.locator('text=At or Over Capacity')).toBeVisible({ timeout: 10000 });

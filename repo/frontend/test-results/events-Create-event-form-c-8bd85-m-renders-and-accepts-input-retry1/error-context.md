@@ -12,18 +12,28 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/new
-Call log:
-  - navigating to "http://frontend:5173/events/new", waiting until "load"
+Error: expect(locator).toContainText(expected) failed
 
+Locator: locator('h1')
+Expected substring: "Create New Event"
+Timeout: 5000ms
+Error: element(s) not found
+
+Call log:
+  - Expect "toContainText" with timeout 5000ms
+  - waiting for locator('h1')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  117 |       contentType: 'application/json',
-  118 |       body: JSON.stringify(wrapData([])),
-  119 |     });
   120 |   });
   121 | 
   122 |   await page.route('**/api/events', async (route) => {
@@ -121,11 +131,11 @@ Call log:
   214 |       });
   215 |     });
   216 | 
-> 217 |     await page.goto('/events/new');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/events/new
+  217 |     await page.goto('/events/new');
   218 | 
   219 |     // Form heading
-  220 |     await expect(page.locator('h1')).toContainText('Create New Event');
+> 220 |     await expect(page.locator('h1')).toContainText('Create New Event');
+      |                                      ^ Error: expect(locator).toContainText(expected) failed
   221 | 
   222 |     // Fill in the form
   223 |     await page.fill('input[placeholder="Event title"]', 'New Test Event');

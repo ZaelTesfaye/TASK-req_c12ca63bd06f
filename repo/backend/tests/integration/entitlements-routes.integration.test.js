@@ -266,9 +266,15 @@ describe('POST /entitlements/bulk-import/confirm (real DB)', () => {
     });
     const eventId = JSON.parse(evt.payload).data.id;
 
+    // Column names must match src/modules/entitlements/service.js::
+    // validateBulkImport `expectedColumns` exactly:
+    //   event_id, user_id, entitlement_type, quantity, expiry_date
+    // Earlier header drift (entitlement_type_code / quantity_total) made
+    // validate return validCount: 0, so batch_id came back null and the
+    // confirm assertion died on "expected null to be truthy".
     const csv = [
-      'event_id,user_id,entitlement_type_code,quantity_total',
-      `${eventId},${chefUserId},staff_meal,2`,
+      'event_id,user_id,entitlement_type,quantity,expiry_date',
+      `${eventId},${chefUserId},staff_meal,2,`,
     ].join('\n');
 
     const form = new FormData();

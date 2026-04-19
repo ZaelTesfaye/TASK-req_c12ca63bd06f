@@ -12,16 +12,25 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
-Call log:
-  - navigating to "http://frontend:5173/login", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: page.fill: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('#username')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  102 |     // Open create form.
   103 |     await page.click('text=+ Create Event');
   104 |     await page.waitForURL('**/events/new**', { timeout: 10000 });
   105 | 
@@ -121,9 +130,9 @@ Call log:
   199 | 
   200 | test.describe('Fullstack: login flow', () => {
   201 |   test('planner logs in via UI and backend reports the authenticated user', async ({ page }) => {
-> 202 |     await page.goto('/login');
-      |                ^ Error: page.goto: net::ERR_NAME_NOT_RESOLVED at http://frontend:5173/login
-  203 |     await page.fill('#username', 'planner');
+  202 |     await page.goto('/login');
+> 203 |     await page.fill('#username', 'planner');
+      |                ^ Error: page.fill: Test timeout of 30000ms exceeded.
   204 |     await page.fill('#password', 'planner123!');
   205 |     await page.click('button[type="submit"]');
   206 | 
@@ -223,4 +232,5 @@ Call log:
   300 |         start_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
   301 |         end_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
   302 |       },
+  303 |     });
 ```

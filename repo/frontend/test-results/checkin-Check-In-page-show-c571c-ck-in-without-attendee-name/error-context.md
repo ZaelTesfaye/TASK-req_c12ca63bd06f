@@ -12,17 +12,25 @@
 # Error details
 
 ```
-Error: page.goto: net::ERR_CONNECTION_REFUSED at http://frontend:5173/check-in
-Call log:
-  - navigating to "http://frontend:5173/check-in", waiting until "load"
+Test timeout of 30000ms exceeded.
+```
 
+```
+Error: locator.selectOption: Test timeout of 30000ms exceeded.
+Call log:
+  - waiting for locator('select')
+
+```
+
+# Page snapshot
+
+```yaml
+- generic [ref=e2]: "Blocked request. This host (\"frontend\") is not allowed. To allow this host, add \"frontend\" to `server.allowedHosts` in vite.config.js."
 ```
 
 # Test source
 
 ```ts
-  114 |       });
-  115 |     }
   116 |   });
   117 | }
   118 | 
@@ -121,10 +129,10 @@ Call log:
   211 |     await setupAuth(page);
   212 |     await setupCheckInRoutes(page);
   213 | 
-> 214 |     await page.goto('/check-in');
-      |                ^ Error: page.goto: net::ERR_CONNECTION_REFUSED at http://frontend:5173/check-in
+  214 |     await page.goto('/check-in');
   215 | 
-  216 |     await page.locator('select').selectOption('evt-1');
+> 216 |     await page.locator('select').selectOption('evt-1');
+      |                                  ^ Error: locator.selectOption: Test timeout of 30000ms exceeded.
   217 |     await expect(page.locator('text=CHECK IN')).toBeVisible({ timeout: 10000 });
   218 | 
   219 |     // The CHECK IN button should be disabled when input is empty
